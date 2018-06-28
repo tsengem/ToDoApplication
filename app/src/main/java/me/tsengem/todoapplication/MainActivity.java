@@ -1,5 +1,6 @@
 package me.tsengem.todoapplication;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,6 +21,13 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+
+    // a numeric code to identify the edit activity
+    public static final int EDIT_REQUEST_CODE = 20;
+
+    // keys used for passing data between activities
+    public static final String ITEM_TEXT = "itemText";
+    public static final String ITEM_POSITION = "itemPosition";
 
     ArrayList<String> items;
     ArrayAdapter<String> itemsAdapter;
@@ -67,6 +75,22 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+
+        // set the ListView's regular click listener
+        lvItems.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
+                // first parameter is the context, second is the class of the activity to launch
+                Intent i = new Intent(MainActivity.this, EditItemActivity.class);
+
+                // put "extras" into the bundle for access in the edit activity
+                i.putExtra(ITEM_TEXT, items.get(position));
+                i.putExtra(ITEM_POSITION, position);
+
+                // brings up the edit activity with the expectation of a result
+                startActivityForResult(i, EDIT_REQUEST_CODE);
+            }
+        });
     }
 
     public void onAddItem(View v) {
@@ -104,7 +128,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             // print the error to the console
             e.printStackTrace();
-
             // just load an empty list
             items = new ArrayList<>();
         }
@@ -118,6 +141,33 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             // print the error to the console
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // EDIT_REQUEST CODE defined in constants
+        if (resultCode == RESULT_OK && requestCode == EDIT_REQUEST_CODE) {
+            // extract updated item value from result extras
+            String updatedItem = data.getExtras().getString(ITEM_TEXT);
+
+            // get the position of the item which was edited
+            int position = data.getExtras().getInt(ITEM_POSITION, 0);
+
+            // update the model with the new item text at the edited position
+            items.set(position, updatedItem);
+
+            // notify the adapter the model changed
+            itemsAdapter.notifyDataSetChanged();
+
+            // store the updated items back to disk
+            writeItems();
+
+            // notify the user the operation completed OK
+            Toast toast = Toast.makeText(this, "Item updated", Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.CENTER, 0, 0);
+            toast.show();
         }
     }
 }
